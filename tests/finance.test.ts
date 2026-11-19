@@ -10,22 +10,28 @@ const d = genererDemo(REF);
 const [t1, t2] = d.taxis;
 
 describe("investissement et amortissement", () => {
-  it("investissement par défaut d'environ 3 millions FCFA", () => {
-    expect(F.investTaxi(d, t1.id)).toBe(3_000_000);
+  it("frais de démarrage par défaut : 2 819 750 FCFA, dont 2 780 000 amortissables", () => {
+    expect(F.investTaxi(d, t1.id)).toBe(2_819_750);
+    expect(F.baseAmort(d, t1.id)).toBe(2_780_000);
     expect(F.investTotal(d, null)).toBe(F.investTaxi(d, t1.id) + F.investTaxi(d, t2.id));
   });
-  it("amortissement linéaire : (I − VR) / durée", () => {
-    expect(F.amortAnnuel(t1, 3_000_000)).toBe(480_000);
-    const tab = F.tableauAmort(t1, 3_000_000);
+  it("amortissement linéaire sur la seule part amortissable : (base − VR) / durée", () => {
+    expect(F.amortAnnuel(t1, F.baseAmort(d, t1.id))).toBe(436_000);
+    const tab = F.tableauAmort(t1, F.baseAmort(d, t1.id));
     expect(tab.lignes).toHaveLength(5);
     expect(tab.lignes.at(-1)!.vnc).toBe(600_000);
   });
   it("amortissement couru au jour près et plafonné à la durée", () => {
-    const an = F.amortTaxiPeriode(t1, 3_000_000, t1.date_mise_service, addDays(addMonths(t1.date_mise_service, 12), -1));
-    expect(Math.round(an)).toBeGreaterThan(479_000);
-    expect(Math.round(an)).toBeLessThan(481_000);
-    const tout = F.amortTaxiPeriode(t1, 3_000_000, "2000-01-01", "2099-01-01");
-    expect(Math.round(tout)).toBe(2_400_000);
+    const an = F.amortTaxiPeriode(t1, 2_780_000, t1.date_mise_service, addDays(addMonths(t1.date_mise_service, 12), -1));
+    expect(Math.round(an)).toBeGreaterThan(435_000);
+    expect(Math.round(an)).toBeLessThan(437_000);
+    const tout = F.amortTaxiPeriode(t1, 2_780_000, "2000-01-01", "2099-01-01");
+    expect(Math.round(tout)).toBe(2_180_000);
+  });
+  it("budget de démarrage = investissement + premières échéances payées à la mise en service", () => {
+    const b = F.budgetDemarrage(d, t1);
+    expect(b.premieresCharges).toBe(100_000 + 36_500 + 10_000 + 10_000 + 5_000 + 25_000);
+    expect(b.total).toBe(2_819_750 + 186_500);
   });
 });
 

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { store, useDonnees } from "../lib/store";
-import { MODES, bilan, periode, serieMois, plan, tableauAmort, investTaxi, echeancier, mensualise, FREQ, depJournee, type Echeance } from "../lib/finance";
+import { MODES, bilan, periode, serieMois, plan, tableauAmort, investTaxi, baseAmort, budgetDemarrage, echeancier, mensualise, FREQ, depJournee, type Echeance } from "../lib/finance";
 import { fmt, fcfa, pct, court, today, addDays, monthStart, mKey, moisLabel, dateCourt, dateMini, daysBetween, addMonths } from "../lib/format";
 import { uuid } from "../lib/ids";
 import type { Charge, Investissement, Mode, Taxi } from "../lib/types";
@@ -142,23 +142,30 @@ function Invest({ taxi }: { taxi: Taxi }) {
   const { toast } = useUI();
   const [edit, setEdit] = useState<Investissement | null>(null);
   const items = d.investissements.filter(i => i.taxi_id === taxi.id).sort((a, b) => a.ordre - b.ordre);
-  const I = investTaxi(d, taxi.id), tab = tableauAmort(taxi, I);
+  const I = investTaxi(d, taxi.id), B = baseAmort(d, taxi.id), tab = tableauAmort(taxi, B), bud = budgetDemarrage(d, taxi);
   const ecoule = Math.max(0, Math.min(taxi.duree_amortissement, daysBetween(taxi.date_mise_service, today()) / 365.25));
   return <div className="cols">
     <div>
       <div className="card flush"><div className="list">
         {items.map(i => <button key={i.id} className="li" onClick={() => setEdit(i)}>
-          <div className="tx"><b>{i.libelle}</b></div><div className="am">{fmt(i.montant)}</div><Icon n="edit" className="i mut" /></button>)}
-        <div className="li" style={{ background: "var(--surface-2)" }}><div className="tx"><b>Investissement total</b></div><div className="am" style={{ fontSize: 17 }}>{fcfa(I)}</div></div>
+          <div className="tx"><b>{i.libelle}</b><span>{i.amortissable === false ? "Frais de démarrage consommé" : "Amortissable"}</span></div>
+          <div className="am">{fmt(i.montant)}</div><Icon n="edit" className="i mut" /></button>)}
+        <div className="li" style={{ background: "var(--surface-2)" }}><div className="tx"><b>Investissement à rembourser</b></div><div className="am" style={{ fontSize: 17 }}>{fcfa(I)}</div></div>
       </div></div>
-      <button className="btn ghost block" style={{ marginTop: 10 }} onClick={() => setEdit({ id: uuid(), taxi_id: taxi.id, libelle: "", montant: 0, ordre: items.length })}><Icon n="plus" /> Ajouter un poste</button>
+      <button className="btn ghost block" style={{ marginTop: 10 }} onClick={() => setEdit({ id: uuid(), taxi_id: taxi.id, libelle: "", montant: 0, ordre: items.length, amortissable: true })}><Icon n="plus" /> Ajouter un poste</button>
+      <div className="card rows-tight" style={{ marginTop: 12 }}><h3>Budget de démarrage</h3>
+        <div className="kv"><span>Acquisition (amortissable)</span><b>{fmt(bud.amortissable)}</b></div>
+        <div className="kv"><span>Frais consommés</span><b>{fmt(bud.fraisDemarrage)}</b></div>
+        <div className="kv"><span>Premières échéances payées</span><b>{fmt(bud.premieresCharges)}</b></div>
+        <div className="kv" style={{ borderTop: "1.5px solid var(--line)" }}><span><b style={{ fontFamily: "var(--sans)" }}>Trésorerie engagée au démarrage</b></span><b>{fcfa(bud.total)}</b></div>
+      </div>
     </div>
     <div>
       <div className="card rows-tight"><h3>Amortissement linéaire</h3>
-        <div className="kv"><span>Base amortissable</span><b>{fmt(Math.max(0, I - taxi.valeur_residuelle))}</b></div>
+        <div className="kv"><span>Base amortissable</span><b>{fmt(Math.max(0, B - taxi.valeur_residuelle))}</b></div>
         <div className="kv"><span>Par an · par mois</span><b>{fmt(tab.annuel)} · {fmt(tab.mensuel)}</b></div>
         <div className="kv"><span>Fin d'amortissement</span><b>{dateCourt(tab.fin)}</b></div>
-        <div className="kv"><span>Valeur nette aujourd'hui</span><b>{fmt(I - tab.annuel * ecoule)}</b></div>
+        <div className="kv"><span>Valeur nette aujourd'hui</span><b>{fmt(B - tab.annuel * ecoule)}</b></div>
       </div>
       <div className="card flush" style={{ marginTop: 12 }}><div className="tbl-wrap"><table className="tbl" style={{ minWidth: 0 }}>
         <thead><tr><th>Année</th><th>Dotation</th><th>Cumul</th><th>Valeur nette</th></tr></thead>
@@ -173,7 +180,9 @@ function Invest({ taxi }: { taxi: Taxi }) {
         <button className="btn" onClick={async () => { if (!edit.libelle.trim()) return toast("Libellé obligatoire."); await store.enregistrer("investissements", edit); setEdit(null); toast("Investissement mis à jour"); }}>
           <Icon n="check" /> Enregistrer</button></div>}>
       {edit && <><Field label="Libellé"><input className="input" autoFocus value={edit.libelle} onChange={e => setEdit({ ...edit, libelle: e.target.value })} /></Field>
-        <Field label="Montant"><Money xl value={edit.montant} onChange={v => setEdit({ ...edit, montant: v })} /></Field></>}
+        <Field label="Montant"><Money xl value={edit.montant} onChange={v => setEdit({ ...edit, montant: v })} /></Field>
+        <div className="switch"><div><b>Amortissable</b><span>Désactivez pour une dépense consommée au démarrage (plein, nettoyage).</span></div>
+          <button type="button" className="toggle" role="switch" aria-checked={edit.amortissable !== false} onClick={() => setEdit({ ...edit, amortissable: edit.amortissable === false })} /></div></>}
     </Sheet>
   </div>;
 }

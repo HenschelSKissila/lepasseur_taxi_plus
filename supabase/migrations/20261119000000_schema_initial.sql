@@ -91,10 +91,13 @@ create table if not exists public.investissements (
   libelle     text not null,
   montant     bigint not null check (montant >= 0),
   ordre       smallint not null default 0,
+  amortissable boolean not null default true,      -- false : frais de démarrage consommés (plein, nettoyage)
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
   deleted_at  timestamptz
 );
+-- Mise à niveau si une version antérieure du script a déjà été exécutée
+alter table public.investissements add column if not exists amortissable boolean not null default true;
 
 -- ------------------------------------------------- journées d'exploitation
 -- L'identifiant d'une journée est dérivé de (taxi, date) côté application :

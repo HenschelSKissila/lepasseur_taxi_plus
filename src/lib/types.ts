@@ -41,6 +41,8 @@ export interface Investissement extends Ligne {
   libelle: string;
   montant: number;
   ordre: number;
+  /** false = frais de démarrage consommés (plein initial, nettoyage) : récupérés mais non amortis. */
+  amortissable: boolean;
 }
 
 export interface Chauffeur extends Ligne {

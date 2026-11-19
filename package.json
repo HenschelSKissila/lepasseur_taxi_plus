@@ -1,7 +1,7 @@
 {
   "name": "le-passeur-taxi-plus",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Gestion de flotte de taxis : recettes, dépenses, chauffeurs, salaires, amortissement et retour sur investissement (FCFA).",
   "type": "module",
   "scripts": {
@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
-    "test:sql": "node tests/schema.test.mjs supabase/migrations/20261119000000_schema_initial.sql"
+    "test:sql": "node tests/schema.test.mjs supabase/migrations/20261119000000_schema_initial.sql",
+    "build:local": "tsc -b && vite build --mode horsserveur"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.2",

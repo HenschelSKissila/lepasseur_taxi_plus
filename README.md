@@ -48,16 +48,18 @@ Il vous faut trois comptes gratuits : **GitHub**, **Supabase**, **Netlify**.
 
 ### Étape 1 — Créer la base de données (Supabase)
 
-1. Sur [supabase.com](https://supabase.com) → **New project**. Choisissez une région proche
-   (ex. *West EU – Paris* ou *Frankfurt*), notez le mot de passe de la base.
+> Votre projet est déjà branché : l'adresse `https://zsnmuyltwdbrbrjlavvz.supabase.co` et la clé
+> publique sont dans `.env.production`, lu automatiquement à chaque build Netlify. Il reste
+> seulement à créer les tables (point 2) dans **ce** projet.
+
+1. (Projet déjà créé.) Pour un autre projet : [supabase.com](https://supabase.com) → **New project**,
+   région proche (*Paris* ou *Frankfurt*), puis remplacez les deux valeurs de `.env.production`.
 2. Menu **SQL Editor** → **New query** → collez **tout** le contenu du fichier
    `supabase/migrations/20261119000000_schema_initial.sql` → **Run**.
    Le message *Success. No rows returned* confirme la création des tables.
-3. Menu **Project Settings → API** : copiez
-   - **Project URL** (ex. `https://abcdxyz.supabase.co`)
-   - la clé **anon public**
-
-   Ne copiez jamais la clé `service_role` dans Netlify ou dans le code.
+3. La clé utilisée est la clé **publishable** (`sb_publishable_…`) : elle est publique par nature,
+   la sécurité repose sur les règles RLS créées par le script. Ne copiez **jamais** la clé
+   secrète (`sb_secret_…` / `service_role`) dans Netlify ou dans le code.
 
 ### Étape 2 — Déposer le code sur GitHub
 
@@ -79,14 +81,8 @@ Il vous faut trois comptes gratuits : **GitHub**, **Supabase**, **Netlify**.
 
 1. Sur [netlify.com](https://app.netlify.com) → **Add new site → Import an existing project → GitHub**
    → choisissez le dépôt. Les réglages de build sont lus dans `netlify.toml` : ne changez rien.
-2. Avant de déployer, ouvrez **Environment variables** (ou après : *Site configuration →
-   Environment variables*) et ajoutez :
-
-   | Variable | Valeur |
-   |---|---|
-   | `VITE_SUPABASE_URL` | la Project URL de l'étape 1 |
-   | `VITE_SUPABASE_ANON_KEY` | la clé anon public de l'étape 1 |
-
+2. Aucune variable à saisir : les clés sont dans `.env.production`. (Une variable définie dans
+   Netlify, si vous en ajoutez une, est prioritaire.)
 3. **Deploy**. Après 1 à 2 minutes, le site est en ligne à une adresse du type
    `https://le-passeur-taxi-plus.netlify.app` (renommable dans *Site configuration*).
    Si vous avez ajouté les variables après le premier déploiement : **Deploys → Trigger deploy**.
@@ -193,11 +189,40 @@ La première connexion à un compte nécessite Internet ; ensuite tout fonctionn
 | Salaire dû | Fixe ; ou jours travaillés × montant ; ou % des recettes du chauffeur ; moins les retenues. Reste = dû − salaires − avances |
 | Prélèvement | Argent retiré par le propriétaire-conducteur : ni charge ni recette, il réduit la trésorerie |
 
-Hypothèses par défaut (modifiables) : investissement 3 000 000 FCFA, versement
-20 000 FCFA × 26 jours, assurance 250 000 FCFA/an, visite technique 25 000 FCFA/semestre,
-taxe municipale 5 000 FCFA/mois, vidange 25 000 FCFA/mois, amortissement sur 5 ans avec
-600 000 FCFA de valeur de revente. **Vérifiez ces montants localement** : ils servent de
-point de départ, pas de référence officielle.
+### Frais de démarrage par défaut (Brazzaville, modifiables)
+
+| Poste | Montant | Traitement |
+|---|---|---|
+| Achat du véhicule (occasion type Corolla) | 2 300 000 | amortissable (marché : 1,5 – 3 M) |
+| Peinture complète vert / blanc | 200 000 | amortissable (100 000 – 300 000) |
+| Carte grise définitive · certificat de vente · numérotage taxi | 30 000 · 20 000 · 20 000 | amortissable |
+| Réservation de plaque | 100 000 | amortissable — à retirer si le véhicule a déjà des plaques |
+| Révision mécanique · équipements | 80 000 · 30 000 | amortissable |
+| Premier plein (50 L × 775 FCFA) | 38 750 | consommé, non amortissable |
+| Nettoyage initial | 1 000 | consommé, non amortissable |
+| **Investissement à rembourser** | **2 819 750** | |
+| Assurance RC usage taxi | 100 000 / an | 1re échéance payée au démarrage (60 000 – 120 000) |
+| Patente | 36 500 / an | idem |
+| Droits d'auteur (BCDA) | 10 000 / an | idem |
+| Taxe de roulage | 10 000 / an | idem — **exonération des taxis à vérifier en mairie** (loi de finances 2026) |
+| Droit de stationnement | 5 000 / an | idem |
+| Visite technique | 25 000 / semestre | idem |
+| **Trésorerie nécessaire au démarrage** | **3 006 250** | |
+
+Ensuite : vidange 20 000 FCFA/mois (échéancier), entretien courant + lavage ≈ 35 000 FCFA/mois
+(prévisionnel), carburant 10 000 – 15 000 FCFA/jour en exploitation directe, objectif de
+versement 20 000 FCFA × 26 jours, amortissement sur 5 ans avec 600 000 FCFA de valeur de revente.
+
+Pourquoi l'assurance et les taxes ne sont pas dans l'investissement : elles reviennent chaque
+année. Les compter dans l'investissement **et** dans les charges ferait payer deux fois la
+première année dans le calcul du retour. Elles apparaissent donc comme charges payées le jour
+de la mise en service, et dans le « budget de démarrage ».
+
+Non intégrés : l'**Impôt Global Forfaitaire** (proportionnel au chiffre d'affaires, la patente
+s'en déduit) — à ajouter comme charge une fois son montant connu ; l'**autorisation de transport
+public (ATP)**, dont les taxis sont exemptés.
+
+**Vérifiez ces montants localement** : ils servent de point de départ, pas de référence officielle.
 
 ---
 
@@ -212,7 +237,7 @@ cp .env.example .env.local     # renseigner l'URL et la clé Supabase (ou laisse
 npm run dev                    # http://localhost:5173
 npm test                       # moteur financier + synchronisation hors ligne (Vitest)
 npm run test:sql               # schéma, contraintes et sécurité RLS (PostgreSQL embarqué)
-npm run build && npx vite preview --port 4173
+npm run build:local && npx vite preview --port 4173   # version sans serveur pour les tests
 python3 tests/e2e.py           # parcours complet dans Chromium (Playwright)
 ```
 

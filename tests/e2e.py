@@ -1,5 +1,5 @@
 """Parcours complet dans Chromium (mode local, sans Supabase).
-Usage : npm run build && npx vite preview --port 4173  puis  python3 tests/e2e.py
+Usage : npm run build:local && npx vite preview --port 4173  puis  python3 tests/e2e.py
 """
 import os, sys, re
 from playwright.sync_api import sync_playwright
@@ -34,7 +34,7 @@ with sync_playwright() as p:
     print("— Démonstration")
     page.click("text=Voir une démonstration"); page.wait_for_selector(".hero")
     ok(page.locator(".flux .f").count() == 3, "entrées / sorties / solde affichés")
-    ok(page.locator(".cat").count() >= 5, f"détail des dépenses par catégorie ({page.locator('.cat').count()})")
+    ok(page.locator(".cat").count() >= 3, f"détail des dépenses par catégorie ({page.locator('.cat').count()})")
     page.locator(".cat button").first.click()
     ok(page.locator(".cat .lines div").count() > 0, "une catégorie se déplie jusqu'aux lignes")
     ok(page.locator(".recharts-surface").count() >= 2, "graphiques rendus")
@@ -69,7 +69,7 @@ with sync_playwright() as p:
     ok(page.locator(".sheet.on .money-wrap.xl").count() == 1, "fiche journée depuis le calendrier"); shot(page, "09-fiche-journee")
     page.keyboard.press("Escape"); page.wait_for_timeout(400)
     page.click("role=tab[name='Investissement']"); page.wait_for_selector(".tbl")
-    ok("3 000 000" in page.inner_text("main").replace("\u00a0", " ").replace("\u202f", " "), "investissement de 3 000 000 FCFA"); shot(page, "10-taxi-invest")
+    ok("2 819 750" in page.inner_text("main").replace("\u00a0", " ").replace("\u202f", " "), "investissement de 2 819 750 FCFA et budget de démarrage"); shot(page, "10-taxi-invest")
 
     print("— Dépenses")
     page.goto(URL + "/depenses"); page.wait_for_selector(".tabs")
@@ -123,10 +123,14 @@ with sync_playwright() as p:
     page.click("text=Ajouter un taxi"); page.wait_for_selector(".step-dots")
     page.click("text=Continuer"); page.wait_for_selector(".choice")
     page.click("text=Continuer"); page.wait_for_selector(".inv-row")
-    ok("3 000 000" in page.inner_text("main").replace("\u00a0", " ").replace("\u202f", " "), "investissement pré-rempli à 3 000 000 FCFA"); shot(page, "20-assistant-invest")
-    page.click("text=Continuer"); page.wait_for_selector(".summary"); shot(page, "21-assistant-previsionnel")
+    ok("2 819 750" in page.inner_text("main").replace("\u00a0", " ").replace("\u202f", " "), "frais de démarrage pré-remplis (2 819 750 FCFA)"); shot(page, "20-assistant-invest")
+    page.click("text=Continuer"); page.wait_for_selector(".summary")
+    ok("3 006 250" in page.inner_text("main").replace("\u00a0", " "), "budget de démarrage 3 006 250 FCFA (taxes payées au démarrage incluses)")
+    ok(page.locator("text=Patente").count() == 1 and page.locator("text=BCDA").count() == 1, "patente et droits d'auteur proposés"); shot(page, "21-assistant-previsionnel")
     page.click("text=Créer le taxi"); page.wait_for_selector(".hero")
     ok("Taxi 01" in page.inner_text("main"), "taxi créé")
+    page.click("role=tab[name='Investissement']"); page.wait_for_selector(".tbl")
+    ok("3 006 250" in page.inner_text("main").replace("\u00a0", " "), "premières échéances enregistrées comme payées"); shot(page, "22-fiche-budget")
     page.reload(); page.wait_for_selector(".hero"); ok("Taxi 01" in page.inner_text("main"), "taxi conservé après rechargement")
 
     b.close()

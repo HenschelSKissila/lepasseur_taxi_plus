@@ -583,3 +583,4 @@ main{overflow-x:clip}
 .donut-wrap .donut-list{flex:1 1 230px}
 @media (max-width:520px){.donut-wrap{justify-content:center}}
 .mono,.num,.kpi .v,.flux .f b,.li .am,.tbl td,.chip,.money-wrap .input{word-spacing:-.18em}
+.ob-logo{width:150px!important}

@@ -34,7 +34,7 @@ export const FREQ: Record<Frequence, { nom: string; mois: number }> = {
   semestriel: { nom: "Semestrielle", mois: 6 }, annuel: { nom: "Annuelle", mois: 12 }, unique: { nom: "Unique", mois: 0 }
 };
 
-export const CAT_CHARGE = ["Assurance", "Contrôle technique", "Taxes & licences", "Stationnement", "Entretien programmé", "Téléphone & divers", "Autre"];
+export const CAT_CHARGE = ["Assurance", "Impôts & taxes", "Contrôle technique", "Taxes & licences", "Stationnement", "Entretien programmé", "Téléphone & divers", "Autre"];
 export const CAT_IMPREVU = ["Panne mécanique", "Pneumatique", "Accident / carrosserie", "Électricité / batterie", "Amende / contrôle", "Vol / vandalisme", "Autre imprévu"];
 export const CAT_ENTRETIEN = ["Vidange", "Freins", "Pneus", "Amortisseurs", "Révision", "Lavage", "Pièce détachée"];
 export const CAT_AUTRE = ["Administratif", "Équipement", "Frais bancaires", "Divers"];
@@ -55,6 +55,16 @@ export const investTaxi = (d: Donnees, id: string) =>
   d.investissements.filter(i => i.taxi_id === id).reduce((s, i) => s + i.montant, 0);
 export const investTotal = (d: Donnees, taxiId: string | null) =>
   taxisDe(d, taxiId).reduce((s, t) => s + investTaxi(d, t.id), 0);
+/** Part amortissable de l'investissement (le véhicule et sa mise en conformité, hors plein et nettoyage). */
+export const baseAmort = (d: Donnees, id: string) =>
+  d.investissements.filter(i => i.taxi_id === id && i.amortissable !== false).reduce((s, i) => s + i.montant, 0);
+/** Budget de démarrage = investissement + charges réglées à la mise en service (1re assurance, taxes…). */
+export function budgetDemarrage(d: Donnees, t: Taxi) {
+  const premieres = d.depenses.filter(p => p.taxi_id === t.id && p.type === "fixe" && p.echeance === t.date_mise_service)
+    .reduce((s, p) => s + p.montant, 0);
+  const I = investTaxi(d, t.id), base = baseAmort(d, t.id);
+  return { investissement: I, amortissable: base, fraisDemarrage: I - base, premieresCharges: premieres, total: I + premieres };
+}
 
 /* ------------------------------------------------------- amortissement */
 export const amortAnnuel = (t: Taxi, I: number) => Math.max(0, I - t.valeur_residuelle) / Math.max(1, t.duree_amortissement);
@@ -67,7 +77,7 @@ export function amortTaxiPeriode(t: Taxi, I: number, a: string, b: string) {
   return Math.max(0, I - t.valeur_residuelle) * (daysBetween(x, y) + 1) / total;
 }
 export const amortPeriode = (d: Donnees, taxiId: string | null, a: string, b: string) =>
-  taxisDe(d, taxiId).reduce((s, t) => s + amortTaxiPeriode(t, investTaxi(d, t.id), a, b), 0);
+  taxisDe(d, taxiId).reduce((s, t) => s + amortTaxiPeriode(t, baseAmort(d, t.id), a, b), 0);
 
 export function tableauAmort(t: Taxi, I: number) {
   const an = amortAnnuel(t, I), lignes = [];
@@ -132,8 +142,8 @@ export function bilan(d: Donnees, taxiId: string | null, ref = today()) {
   const taux = taxisDe(d, taxiId);
   const provision = taux.reduce((s, t) => s + periode(d, t.id, mise, fin).recettes * t.taux_imprevus, 0);
   const vnc = taux.reduce((s, t) => {
-    const It = investTaxi(d, t.id);
-    return s + Math.max(Math.min(t.valeur_residuelle, It), It - amortTaxiPeriode(t, It, t.date_mise_service, fin));
+    const B = baseAmort(d, t.id);
+    return s + Math.max(Math.min(t.valeur_residuelle, B), B - amortTaxiPeriode(t, B, t.date_mise_service, fin));
   }, 0);
   return {
     ...p, mise, I, ecoules, rythme, rythmeMois: rythme * 30.4375, recupere: p.marge,
@@ -231,6 +241,7 @@ export function plan(d: Donnees, t: Taxi, o: Partial<{ recetteJour: number; jour
     : ch.remuneration === "journalier" ? ch.montant * jours : ch.remuneration === "pourcentage" ? recette * ch.pourcentage / 100 : 0);
   const fixes = o.fixes ?? fixesMensuelles(d, t.id);
   const I = o.invest ?? investTaxi(d, t.id);
+  const base = o.invest != null ? o.invest - (investTaxi(d, t.id) - baseAmort(d, t.id)) : baseAmort(d, t.id);
   const variable = carb * jours + entretien + salaire;
   const imprevus = recette * t.taux_imprevus;
   const marge = recette - variable - fixes - imprevus;
@@ -238,7 +249,7 @@ export function plan(d: Donnees, t: Taxi, o: Partial<{ recetteJour: number; jour
   const varJour = carb + (ch?.remuneration === "journalier" ? ch.montant : 0);
   const facteur = Math.max(0.01, 1 - t.taux_imprevus - (ch?.remuneration === "pourcentage" ? ch.pourcentage / 100 : 0));
   return {
-    I, recette, variable, salaire, fixes, imprevus, marge, amort: amortAnnuel(t, I) / 12,
+    I, recette, variable, salaire, fixes, imprevus, marge, amort: amortAnnuel(t, Math.max(0, base)) / 12,
     retourMois: marge > 0 ? I / marge : null, roiAnnuel: I ? marge * 12 / I : 0,
     seuilJour: (varJour + coutFixeJour) / facteur,
     cible12: (varJour + coutFixeJour + I / 12 / Math.max(1, jours)) / facteur
