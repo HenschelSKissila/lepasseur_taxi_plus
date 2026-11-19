@@ -29,7 +29,7 @@ with sync_playwright() as p:
     page.evaluate("navigator.serviceWorker.ready")
     page.wait_for_function("navigator.serviceWorker.controller !== null || true")
     m = page.evaluate("fetch('/manifest.webmanifest').then(r=>r.json())")
-    ok(m["display"] == "standalone" and len(m["icons"]) == 3, "manifeste PWA valide (standalone, 3 icônes)")
+    ok(m["display"] == "standalone" and any(i.get("purpose") == "maskable" for i in m["icons"]), "manifeste PWA valide (standalone, icône maskable)")
 
     print("— Démonstration")
     page.click("text=Voir une démonstration"); page.wait_for_selector(".hero")

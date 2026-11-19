@@ -103,7 +103,7 @@ export async function verifierRappel(systeme = false) {
   await ajouterNotif(`rappel-${t}`, titre, corps, "/saisie");
   if (systeme && rappelActif() && rappelAppareil()) {
     const reg = await navigator.serviceWorker?.ready;
-    reg?.showNotification(titre, { body: corps, tag: "rappel-jour", icon: "/icons/icon-192.png", badge: "/icons/favicon-64.png",
+    reg?.showNotification(titre, { body: corps, tag: "rappel-jour", icon: "/icons/icon-192.png", badge: "/icons/badge-96.png",
       data: { url: "/saisie" } });
   }
 }

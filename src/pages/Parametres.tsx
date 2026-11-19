@@ -17,7 +17,7 @@ const NOMS: Record<string, string> = { taxis: "taxi", journees: "journée", depe
 export default function Parametres() {
   const d = useDonnees();
   const s = useSync();
-  const { espace, user, deconnecter, quitterDemo } = useSession();
+  const { espace, user, deconnecter, quitterDemo, supprimerCompte } = useSession();
   const { toast, confirmer } = useUI();
   const P = useParametres();
   const [appareil, setAppareil] = useState(rappelAppareil());
@@ -137,7 +137,12 @@ export default function Parametres() {
       {espace === "distant" && <button className="btn ghost block" onClick={async () => {
         if (s.enAttente && !await confirmer("Données non envoyées", `${s.enAttente} modification(s) n'ont pas encore atteint le serveur. Vous déconnecter maintenant les perdrait. Continuer ?`, "Me déconnecter", true)) return;
         deconnecter(); }}><Icon n="logout" /> Se déconnecter</button>}
+      {espace === "distant" && <button className="btn danger block" style={{ marginTop: 10 }} onClick={async () => {
+        if (!await confirmer("Supprimer définitivement votre compte ?", "Le compte et TOUTES ses données (taxis, journées, dépenses, chauffeurs, salaires, réglages) seront effacés du serveur et de tous vos appareils. Cette action est irréversible. Pensez à exporter une sauvegarde avant.", "Supprimer mon compte", true)) return;
+        try { await supprimerCompte(); } catch (e: any) { toast(e.message); }
+      }}><Icon n="trash" /> Supprimer mon compte</button>}
       {espace === "demo" && <button className="btn block" onClick={quitterDemo}>Quitter la démonstration</button>}
+      <p className="sub" style={{ marginTop: 12 }}><a href="/confidentialite" target="_blank" rel="noopener">Politique de confidentialité</a></p>
       {espace === "local" && <p className="sub">Pour synchroniser entre plusieurs téléphones, configurez Supabase (voir le guide de déploiement).</p>}
     </div>
   </div>;

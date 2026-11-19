@@ -158,6 +158,59 @@ Test manuel : appelez la fonction avec `?force=1` et l'en-tête `x-cron-secret`.
 
 ---
 
+## 3 bis. Publier sur les stores avec PWABuilder
+
+Tout est prêt dans le projet : manifeste complet (identifiant, 10 tailles d'icônes, icônes
+*maskable* et *monochrome*, 6 captures d'écran mobile et bureau, 3 raccourcis), service worker
+hors ligne, page publique de confidentialité, suppression de compte dans l'application (exigée
+par Google Play) et fichier `/.well-known/assetlinks.json`. Contrôle automatique :
+`npm run build && python3 tests/pwa_check.py`.
+
+**Avant de commencer**
+1. Remplacez `contact@votre-domaine.com` dans `public/confidentialite.html` par votre vraie adresse.
+2. Recommandé : un **nom de domaine définitif** (Netlify → *Domain management*). L'application
+   Android est liée à l'adresse du site : changer de domaine plus tard oblige à republier.
+
+**Générer le paquet Android**
+1. Ouvrez [pwabuilder.com](https://www.pwabuilder.com), saisissez l'adresse du site → *Start*.
+   Le rapport doit être vert sur *Manifest*, *Service Worker* et *Security*.
+2. *Package for stores → Android → Generate Package*, puis *Options* :
+
+   | Champ | Valeur |
+   |---|---|
+   | Package ID | `cg.lepasseur.taxiplus` (identique à `assetlinks.json`) |
+   | App name / Launcher name | `LE PASSEUR TAXI+` / `TAXI+` |
+   | App version / Version code | `2.4.0` / `1` (à augmenter à chaque publication) |
+   | Display mode | Standalone |
+   | Status bar, nav bar, splash | `#0B5C30` |
+   | Notification delegation | activé (rappel de 20 h) |
+   | Signing key | *Create new* — **conservez précieusement** le fichier `.keystore` et ses mots de passe : sans eux, aucune mise à jour possible |
+
+3. Téléchargez le ZIP : il contient le `.aab` (Play Store), un `.apk` (test sur téléphone),
+   la clé de signature et un `assetlinks.json` avec l'empreinte SHA-256.
+
+**Relier le site et l'application** (sinon une barre d'adresse s'affiche en haut de l'application)
+1. Copiez l'empreinte SHA-256 du `assetlinks.json` fourni par PWABuilder dans
+   `public/.well-known/assetlinks.json` à la place de `REMPLACER_PAR_…`.
+2. Après le premier envoi sur Google Play : *Play Console → Test et publication → Intégrité de
+   l'application → Signature d'application* → copiez **aussi** l'empreinte SHA-256 de la clé de
+   Google, ajoutez-la comme deuxième valeur dans la liste `sha256_cert_fingerprints`.
+3. Poussez sur GitHub : Netlify republie. Vérifiez que `https://votre-site/.well-known/assetlinks.json`
+   s'affiche.
+
+**Fiche Google Play** (compte développeur : 25 USD une fois)
+- Règles de confidentialité : `https://votre-site/confidentialite`
+- Suppression de compte : `https://votre-site/suppression-compte`
+- Sécurité des données : adresse e-mail (compte), informations financières saisies par
+  l'utilisateur (recettes, dépenses), aucune donnée partagée avec des tiers, chiffrement en
+  transit, suppression possible.
+- Public cible : 18 ans et plus · Catégorie : Entreprise.
+- Icône de la fiche : `public/icons/icon-store-512.png` · captures : `public/screenshots/`.
+
+PWABuilder produit aussi des paquets **Microsoft Store** et **iOS** à partir de la même adresse.
+Pour régénérer les captures après une évolution de l'interface :
+`npm run build:local && npx vite preview --port 4173` puis `python3 tools/captures.py`.
+
 ## 4. Mises à jour
 
 Modifiez le code sur GitHub (ou poussez un commit) : Netlify reconstruit le site, et

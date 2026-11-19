@@ -100,6 +100,7 @@ export default function Connexion() {
         {vue === "oubli" && <button type="button" className="link" onClick={() => aller("connexion")}>← Retour à la connexion</button>}
       </div>
       <p className="sub" style={{ textAlign: "center", marginTop: 16 }}>Vous restez connecté sur cet appareil, même sans Internet, jusqu'à la déconnexion.</p>
+      <p className="sub" style={{ textAlign: "center", marginTop: 6 }}><a href="/confidentialite" target="_blank" rel="noopener">Politique de confidentialité</a></p>
     </form>
   </div>;
 }

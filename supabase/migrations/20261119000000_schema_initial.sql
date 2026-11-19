@@ -301,6 +301,17 @@ drop trigger if exists confirmation_auto on auth.users;
 create trigger confirmation_auto before insert on auth.users
   for each row execute function public.confirmer_email();
 
+-- Suppression du compte par l'utilisateur lui-même (exigée par Google Play pour les applications avec compte).
+-- Efface le compte d'authentification ; toutes les données suivent par « on delete cascade ».
+create or replace function public.supprimer_mon_compte() returns void
+language plpgsql security definer set search_path = public, auth as $$
+begin
+  if auth.uid() is null then raise exception 'Non connecté'; end if;
+  delete from auth.users where id = auth.uid();
+end $$;
+revoke all on function public.supprimer_mon_compte() from public, anon;
+grant execute on function public.supprimer_mon_compte() to authenticated;
+
 -- ===================================================== sécurité (RLS)
 do $$
 declare t text;

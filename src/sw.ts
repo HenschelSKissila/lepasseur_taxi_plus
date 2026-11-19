@@ -10,7 +10,7 @@ declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: str
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 // 2. Toute navigation (ex. /taxis/123 ouvert hors ligne) sert l'application en cache.
-registerRoute(new NavigationRoute(createHandlerBoundToURL("/index.html"), { denylist: [/^\/api\//, /\/[^/?]+\.[^/]+$/] }));
+registerRoute(new NavigationRoute(createHandlerBoundToURL("/index.html"), { denylist: [/^\/api\//, /^\/\.well-known\//, /^\/confidentialite/, /^\/suppression-compte/, /\/[^/?]+\.[^/]+$/] }));
 
 // 3. Mise à jour : l'application demande l'activation quand aucune saisie n'est ouverte.
 self.addEventListener("message", e => { if (e.data?.type === "SKIP_WAITING") self.skipWaiting(); });
@@ -22,7 +22,7 @@ self.addEventListener("push", e => {
   try { p = e.data?.json() ?? {}; } catch { p = { body: e.data?.text() }; }
   e.waitUntil(self.registration.showNotification(p.title || "LE PASSEUR TAXI+", {
     body: p.body || "Pensez à remplir l'état de la journée.",
-    icon: "/icons/icon-192.png", badge: "/icons/favicon-64.png",
+    icon: "/icons/icon-192.png", badge: "/icons/badge-96.png",
     tag: p.tag || "rappel-jour",            // remplace la précédente : jamais d'empilement
     data: { url: p.url || "/saisie" },
     requireInteraction: false               // l'utilisateur peut la supprimer d'un glissement

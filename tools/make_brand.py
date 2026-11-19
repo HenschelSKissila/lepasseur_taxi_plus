@@ -84,3 +84,45 @@ G = os.path.join(APP, "public", "img")
 sur_blanc(SYMB, 320).save(f"{G}/logo-mark.png", optimize=True)
 sur_blanc(PLEIN, 520, .035, 96).save(f"{G}/logo-full.png", optimize=True)
 print("symbole", SYMB, "complet", PLEIN)
+
+# ------------------------------------------------------------------ stores
+# Jeu complet d'icônes demandé par PWABuilder / Play Store / Microsoft Store
+for n in (48, 72, 96, 128, 144, 152, 256, 384):
+    opt(tuile(n), f"{I}/icon-{n}.png")
+opt(tuile(192, plaque=.54, symb=.90, plein=True).convert("RGB"), f"{I}/icon-maskable-192.png")
+opt(tuile(1024, plaque=.68, plein=True).convert("RGB"), f"{I}/icon-store-1024.png")   # fiche Play Store (512 exigé, 1024 accepté en source)
+opt(tuile(512, plaque=.68, plein=True).convert("RGB"), f"{I}/icon-store-512.png")
+
+
+def monochrome(n):
+    """Badge de notification Android : silhouette blanche sur fond transparent (épingle + plus)."""
+    ss = n * 4; o = Image.new("RGBA", (ss, ss), (0, 0, 0, 0)); d = ImageDraw.Draw(o)
+    cx, cy, r = ss * .5, ss * .40, ss * .30
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(255, 255, 255, 255))
+    d.polygon([(cx - r * .72, cy + r * .62), (cx + r * .72, cy + r * .62), (cx, ss * .93)], fill=(255, 255, 255, 255))
+    t, l = r * .17, r * .55
+    d.rectangle([cx - l, cy - t, cx + l, cy + t], fill=(0, 0, 0, 0)); d.rectangle([cx - t, cy - l, cx + t, cy + l], fill=(0, 0, 0, 0))
+    return o.resize((n, n), Image.LANCZOS)
+monochrome(96).save(f"{I}/badge-96.png", optimize=True)
+monochrome(512).save(f"{I}/icon-monochrome-512.png", optimize=True)
+
+
+def raccourci(n, motif):
+    ss = n * 4; o = Image.new("RGBA", (ss, ss), (0, 0, 0, 0)); d = ImageDraw.Draw(o)
+    d.rounded_rectangle([0, 0, ss - 1, ss - 1], radius=int(ss * .22), fill=VERT + (255,))
+    w = (255, 255, 255, 255); J = (244, 179, 4, 255)
+    if motif == "plus":
+        t, l = ss * .07, ss * .26
+        d.rounded_rectangle([ss / 2 - l, ss / 2 - t, ss / 2 + l, ss / 2 + t], radius=t, fill=J)
+        d.rounded_rectangle([ss / 2 - t, ss / 2 - l, ss / 2 + t, ss / 2 + l], radius=t, fill=J)
+    elif motif == "depense":
+        d.rounded_rectangle([ss * .24, ss * .2, ss * .76, ss * .8], radius=ss * .05, fill=w)
+        for k in range(3):
+            y = ss * (.34 + k * .14); d.rounded_rectangle([ss * .33, y, ss * .67, y + ss * .05], radius=ss * .02, fill=VERT + (255,))
+    else:  # graphique
+        for k, h in enumerate((.3, .5, .4)):
+            x = ss * (.24 + k * .2); d.rounded_rectangle([x, ss * (.76 - h), x + ss * .13, ss * .76], radius=ss * .03, fill=J if k == 1 else w)
+    return o.resize((n, n), Image.LANCZOS)
+for m in ("plus", "depense", "graphique"):
+    opt(raccourci(96, m), f"{I}/raccourci-{m}.png")
+print("icônes stores générées")

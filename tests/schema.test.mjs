@@ -67,6 +67,18 @@ await as(A, `insert into parametres (id, entreprise, theme) values ('${A}', 'LE 
 r = await as(B, `select count(*)::int n from parametres`); console.log(r.rows[0].n === 0 ? "ok  les réglages d'un compte sont invisibles pour un autre" : "FAIL réglages");
 try { await as(A, `insert into parametres (id) values ('${B}')`); console.log("FAIL réglages au nom d'un autre"); }
 catch { console.log("ok  une ligne de réglages ne peut appartenir qu'à son compte"); }
+// suppression du compte par l'utilisateur (Google Play)
+const C = "44444444-4444-4444-4444-444444444444";
+await db.exec(`reset role; insert into auth.users (id) values ('${C}')`);
+const tC = (await as(C, `insert into taxis (nom) values ('Taxi C') returning id`)).rows[0].id;
+await as(C, `insert into journees (taxi_id, date, recette) values ('${tC}','2026-11-19',20000)`);
+await as(C, `select public.supprimer_mon_compte()`);
+r = await (async () => { await db.exec("reset role"); return db.query(`select (select count(*) from auth.users where id='${C}')::int u, (select count(*) from public.taxis where owner_id='${C}')::int t, (select count(*) from public.journees where owner_id='${C}')::int j, (select count(*) from public.taxis where owner_id='${A}')::int a`); })();
+console.log(r.rows[0].u === 0 && r.rows[0].t === 0 && r.rows[0].j === 0 ? "ok  « Supprimer mon compte » efface le compte et toutes ses données" : "FAIL suppression " + JSON.stringify(r.rows[0]));
+console.log(r.rows[0].a > 0 ? "ok  la suppression ne touche pas aux autres comptes" : "FAIL autres comptes touchés");
+await db.exec(`reset role; set test.uid = ''; set role anon;`);
+try { await db.query(`select public.supprimer_mon_compte()`); console.log("FAIL anonyme peut supprimer"); } catch { console.log("ok  un visiteur non connecté ne peut rien supprimer"); }
+await db.exec("reset role");
 // chauffeur d'un autre compte
 const chA = (await as(A, `insert into chauffeurs (nom) values ('X') returning id`)).rows[0].id;
 const tB = (await as(B, `insert into taxis (nom) values ('Taxi B') returning id`)).rows[0].id;

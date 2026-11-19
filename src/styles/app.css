@@ -582,6 +582,9 @@ main{overflow-x:clip}
 :root[data-theme="dark"] .side .brand img{background:#fff;border-radius:14px;padding:8px 10px}
 .donut-wrap .donut-list{flex:1 1 230px}
 @media (max-width:520px){.donut-wrap{justify-content:center}}
-.mono,.num,.kpi .v,.flux .f b,.li .am,.tbl td,.chip,.money-wrap .input{word-spacing:-.18em}
+.mono,.num,.kpi .v,.flux .f b,.li .am,.tbl td,.money-wrap .input{word-spacing:-.18em}
 .ob-logo{width:150px!important}
 .ob-logo{width:132px!important;height:auto!important;margin:0 auto 18px!important}
+
+.today-card{flex-wrap:wrap;row-gap:10px}.today-card .li{min-width:0}
+@media (max-width:380px){.today-card .btn{width:100%}}

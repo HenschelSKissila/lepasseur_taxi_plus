@@ -1,7 +1,7 @@
 {
   "name": "le-passeur-taxi-plus",
   "private": true,
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Gestion de flotte de taxis : recettes, dépenses, chauffeurs, salaires, amortissement et retour sur investissement (FCFA).",
   "type": "module",
   "scripts": {

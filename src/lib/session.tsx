@@ -11,6 +11,7 @@ export type Espace = "distant" | "local" | "demo";
 interface Session {
   espace: Espace; user: User | null; pret: boolean; connecte: boolean;
   entrerDemo: () => Promise<void>; quitterDemo: () => Promise<void>; deconnecter: () => Promise<void>;
+  supprimerCompte: () => Promise<void>;
 }
 const Ctx = createContext<Session>(null as unknown as Session);
 export const useSession = () => useContext(Ctx);
@@ -68,6 +69,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const id = user.id;
       await supabase.auth.signOut();
       await store.effacer(id);         // aucune donnée ne reste sur un appareil partagé
+    },
+    /** Supprime définitivement le compte et toutes ses données (serveur + appareil). */
+    async supprimerCompte() {
+      if (!supabase || !user) return;
+      const { error } = await supabase.rpc("supprimer_mon_compte");
+      if (error) throw new Error(/fetch|network/i.test(error.message) ? "Connexion Internet nécessaire pour supprimer le compte." : error.message);
+      const id = user.id;
+      await supabase.auth.signOut({ scope: "local" });
+      await store.effacer(id);
+      try { ["lptp-theme", "lptp-rappel-appareil", "lptp-profil"].forEach(k => localStorage.removeItem(k)); } catch {}
     }
   };
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;

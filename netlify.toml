@@ -6,6 +6,17 @@
 [build.environment]
   NODE_VERSION = "22"
 
+# Pages publiques (accessibles sans compte : exigées par les stores)
+[[redirects]]
+  from = "/confidentialite"
+  to = "/confidentialite.html"
+  status = 200
+
+[[redirects]]
+  from = "/suppression-compte"
+  to = "/confidentialite.html#suppression"
+  status = 301
+
 # Application monopage : toutes les routes renvoient index.html
 [[redirects]]
   from = "/*"
@@ -18,6 +29,14 @@
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
     Service-Worker-Allowed = "/"
+
+# Lien entre le site et l'application Android (Trusted Web Activity générée par PWABuilder)
+[[headers]]
+  for = "/.well-known/assetlinks.json"
+  [headers.values]
+    Content-Type = "application/json"
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "public, max-age=3600"
 
 [[headers]]
   for = "/manifest.webmanifest"
