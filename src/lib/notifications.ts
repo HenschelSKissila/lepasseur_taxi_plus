@@ -13,14 +13,17 @@ import { joursManquants, alertes, type Alerte } from "./finance";
 import { uuidStable } from "./ids";
 import { today } from "./format";
 import type { Notif } from "./types";
+import { lireParametres, majParametres } from "./parametres";
 
-const PREF = "lptp-rappel";
-const MASQUEES = "lptp-alertes-masquees";
+const APPAREIL = "lptp-rappel-appareil";   // cet appareil a autorisé les notifications
 export const HEURE_RAPPEL = 20;
 
 export const supportNotif = () => typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator;
 export const supportPush = () => supportNotif() && "PushManager" in window && !!VAPID_PUBLIC && !!supabase;
-export const rappelActif = () => { try { return localStorage.getItem(PREF) === "1"; } catch { return false; } };
+/** Rappel activé sur le compte (réglage partagé par tous les appareils). */
+export const rappelActif = () => lireParametres().rappel_actif;
+/** Cet appareil a-t-il déjà autorisé les notifications ? */
+export const rappelAppareil = () => { try { return localStorage.getItem(APPAREIL) === "1" && Notification.permission === "granted"; } catch { return false; } };
 
 /* ------------------------------------------------------- notifications stockées */
 export const idNotif = (cle: string) => uuidStable(`notif:${store.userId ?? "local"}:${cle}`);
@@ -31,12 +34,11 @@ export async function ajouterNotif(cle: string, titre: string, corps: string, li
 }
 
 /* ------------------------------------------------------- alertes calculées */
-export function masquees(): Set<string> {
-  try { return new Set(JSON.parse(localStorage.getItem(MASQUEES) || "[]")); } catch { return new Set(); }
-}
-export function masquer(cles: string[]) {
+/** Alertes supprimées : mémorisées sur le compte, donc supprimées sur tous les appareils. */
+export const masquees = (): Set<string> => new Set(lireParametres().alertes_masquees || []);
+export async function masquer(cles: string[]) {
   const s = masquees(); cles.forEach(c => s.add(c));
-  try { localStorage.setItem(MASQUEES, JSON.stringify([...s].slice(-300))); } catch {}
+  await majParametres({ alertes_masquees: [...s].slice(-300) });
 }
 export const alertesVisibles = (): Alerte[] => { const m = masquees(); return alertes(store.data).filter(a => !m.has(a.cle)); };
 
@@ -45,7 +47,8 @@ export async function activerRappel(): Promise<{ ok: boolean; push: boolean; mes
   if (!supportNotif()) return { ok: false, push: false, message: "Ce navigateur ne gère pas les notifications." };
   const perm = await Notification.requestPermission();
   if (perm !== "granted") return { ok: false, push: false, message: "Notifications refusées. Autorisez-les dans les réglages du navigateur." };
-  localStorage.setItem(PREF, "1");
+  localStorage.setItem(APPAREIL, "1");
+  await majParametres({ rappel_actif: true });
   planifierRappelLocal();
   if (!supportPush() || !store.distant) return { ok: true, push: false, message: "Rappel activé sur cet appareil (application ouverte)." };
   try {
@@ -64,7 +67,8 @@ export async function activerRappel(): Promise<{ ok: boolean; push: boolean; mes
   }
 }
 export async function desactiverRappel() {
-  localStorage.removeItem(PREF);
+  localStorage.removeItem(APPAREIL);
+  await majParametres({ rappel_actif: false });
   if (minuteur) clearTimeout(minuteur);
   try {
     const reg = await navigator.serviceWorker.ready;
@@ -80,7 +84,7 @@ export async function desactiverRappel() {
 let minuteur: ReturnType<typeof setTimeout> | null = null;
 export function planifierRappelLocal() {
   if (minuteur) clearTimeout(minuteur);
-  if (!rappelActif()) return;
+  if (!rappelActif() || !rappelAppareil()) return;
   const now = new Date(), cible = new Date(now);
   cible.setHours(HEURE_RAPPEL, 0, 0, 0);
   if (cible <= now) cible.setDate(cible.getDate() + 1);
@@ -97,7 +101,7 @@ export async function verifierRappel(systeme = false) {
   const titre = "Remplissez l'état de la journée";
   const corps = manque.length === 1 ? `La journée de ${noms} n'est pas encore saisie.` : `${manque.length} taxis à saisir : ${noms}.`;
   await ajouterNotif(`rappel-${t}`, titre, corps, "/saisie");
-  if (systeme && rappelActif() && Notification.permission === "granted") {
+  if (systeme && rappelActif() && rappelAppareil()) {
     const reg = await navigator.serviceWorker?.ready;
     reg?.showNotification(titre, { body: corps, tag: "rappel-jour", icon: "/icons/icon-192.png", badge: "/icons/favicon-64.png",
       data: { url: "/saisie" } });

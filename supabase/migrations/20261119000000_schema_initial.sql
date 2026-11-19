@@ -39,6 +39,26 @@ create table if not exists public.profils (
   created_at    timestamptz not null default now()
 );
 
+-- --------------------------------------------- paramètres du compte (synchronisés)
+-- Une ligne par compte (id = identifiant du compte) : entreprise, thème, rappel, alertes masquées.
+-- Tous les appareils connectés au même compte partagent ces réglages.
+create table if not exists public.parametres (
+  id                uuid primary key,
+  owner_id          uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  entreprise        text not null default 'LE PASSEUR TAXI+',
+  responsable       text,
+  telephone         text,
+  ville             text default 'Brazzaville',
+  theme             text not null default 'auto' check (theme in ('auto', 'light', 'dark')),
+  rappel_actif      boolean not null default false,
+  heure_rappel      smallint not null default 20 check (heure_rappel between 0 and 23),
+  alertes_masquees  jsonb not null default '[]'::jsonb,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now(),
+  deleted_at        timestamptz,
+  check (id = owner_id)
+);
+
 -- ---------------------------------------------------------- chauffeurs
 create table if not exists public.chauffeurs (
   id             uuid primary key default gen_random_uuid(),
@@ -210,7 +230,7 @@ create table if not exists public.push_abonnements (
 do $$
 declare t text;
 begin
-  foreach t in array array['chauffeurs','taxis','investissements','journees','charges','depenses','salaires','notifications'] loop
+  foreach t in array array['parametres','chauffeurs','taxis','investissements','journees','charges','depenses','salaires','notifications'] loop
     execute format('create index if not exists %I on public.%I (owner_id, updated_at)', t || '_sync', t);
   end loop;
 end $$;
@@ -244,7 +264,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['profils','chauffeurs','taxis','investissements','journees','charges','depenses',
+  foreach t in array array['profils','parametres','chauffeurs','taxis','investissements','journees','charges','depenses',
                            'salaires','notifications','push_abonnements'] loop
     execute format('drop trigger if exists %I on public.%I', t || '_horodatage', t);
     execute format('create trigger %I before insert or update on public.%I
@@ -269,15 +289,27 @@ drop trigger if exists a_inscription on auth.users;
 create trigger a_inscription after insert on auth.users
   for each row execute function public.creer_profil();
 
+-- Inscription par e-mail + mot de passe SANS vérification : le compte est confirmé à sa création.
+-- (Complément du réglage Authentication → Providers → Email → « Confirm email » désactivé.)
+create or replace function public.confirmer_email() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.email_confirmed_at is null then new.email_confirmed_at := now(); end if;
+  return new;
+end $$;
+drop trigger if exists confirmation_auto on auth.users;
+create trigger confirmation_auto before insert on auth.users
+  for each row execute function public.confirmer_email();
+
 -- ===================================================== sécurité (RLS)
 do $$
 declare t text;
 begin
-  foreach t in array array['profils','chauffeurs','taxis','investissements','journees','charges','depenses',
+  foreach t in array array['profils','parametres','chauffeurs','taxis','investissements','journees','charges','depenses',
                            'salaires','notifications','push_abonnements'] loop
     execute format('alter table public.%I enable row level security', t);
   end loop;
-  foreach t in array array['chauffeurs','taxis','investissements','journees','charges','depenses',
+  foreach t in array array['parametres','chauffeurs','taxis','investissements','journees','charges','depenses',
                            'salaires','notifications','push_abonnements'] loop
     execute format('drop policy if exists "donnees du proprietaire" on public.%I', t);
     execute format('create policy "donnees du proprietaire" on public.%I for all to authenticated
@@ -287,6 +319,20 @@ end $$;
 drop policy if exists "profil personnel" on public.profils;
 create policy "profil personnel" on public.profils for all to authenticated
   using (id = (select auth.uid())) with check (id = (select auth.uid()));
+
+-- ============================================ temps réel (synchronisation instantanée)
+-- Les autres appareils du compte sont prévenus dès qu'une ligne change (la RLS s'applique).
+do $$
+declare t text;
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    foreach t in array array['parametres','chauffeurs','taxis','investissements','journees','charges','depenses','salaires','notifications'] loop
+      if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+        execute format('alter publication supabase_realtime add table public.%I', t);
+      end if;
+    end loop;
+  end if;
+end $$;
 
 -- Le rôle anonyme n'a accès à rien ; les comptes connectés passent par la RLS.
 revoke all on all tables in schema public from anon;

@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { store, useDonnees, useSync } from "../lib/store";
 import { useSession } from "../lib/session";
-import { supabase } from "../lib/supabase";
-import { activerRappel, desactiverRappel, rappelActif, supportNotif, supportPush } from "../lib/notifications";
+import { activerRappel, desactiverRappel, rappelAppareil, supportNotif, supportPush } from "../lib/notifications";
+import { useParametres, majParametres, appliquerTheme } from "../lib/parametres";
 import { exporterJSON, lireSauvegarde, tablesAvecDonnees } from "../lib/export";
 import { heureRel } from "../lib/format";
 import { TABLES } from "../lib/types";
@@ -19,9 +19,14 @@ export default function Parametres() {
   const s = useSync();
   const { espace, user, deconnecter, quitterDemo } = useSession();
   const { toast, confirmer } = useUI();
-  const [rappel, setRappel] = useState(rappelActif());
-  const [theme, setTheme] = useState<string>(() => localStorage.getItem("lptp-theme") || "auto");
-  const [profil, setProfil] = useState(() => { try { return JSON.parse(localStorage.getItem("lptp-profil") || "{}"); } catch { return {}; } });
+  const P = useParametres();
+  const [appareil, setAppareil] = useState(rappelAppareil());
+  const [profil, setProfil] = useState({ entreprise: P.entreprise, responsable: P.responsable, telephone: P.telephone, ville: P.ville });
+  // Les réglages modifiés sur un autre appareil remplacent l'affichage tant qu'on n'édite pas ici
+  const [edite, setEdite] = useState(false);
+  useEffect(() => { if (!edite) setProfil({ entreprise: P.entreprise, responsable: P.responsable, telephone: P.telephone, ville: P.ville }); },
+    [P.entreprise, P.responsable, P.telephone, P.ville]);
+  const changer = (p: Partial<typeof profil>) => { setEdite(true); setProfil(x => ({ ...x, ...p })); };
   const fichier = useRef<HTMLInputElement>(null);
   const [install, setInstall] = useState<any>((window as any).__installPrompt || null);
 
@@ -32,15 +37,10 @@ export default function Parametres() {
     return () => removeEventListener("beforeinstallprompt", f);
   }, []);
 
-  const changerTheme = (t: string) => {
-    setTheme(t); localStorage.setItem("lptp-theme", t);
-    const sombre = t === "dark" || (t === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
-    document.documentElement.dataset.theme = sombre ? "dark" : "light";
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", sombre ? "#0B1410" : "#0B5C30");
-  };
+  const changerTheme = async (t: "auto" | "light" | "dark") => { appliquerTheme(t); await majParametres({ theme: t }); };
   const basculerRappel = async (v: boolean) => {
-    if (v) { const r = await activerRappel(); setRappel(r.ok); toast(r.message); }
-    else { await desactiverRappel(); setRappel(false); toast("Rappel quotidien désactivé"); }
+    if (v) { const r = await activerRappel(); setAppareil(r.ok); toast(r.message); }
+    else { await desactiverRappel(); setAppareil(false); toast("Rappel quotidien désactivé sur le compte"); }
   };
   const testNotif = async () => {
     if (Notification.permission !== "granted") return toast("Activez d'abord le rappel.");
@@ -48,9 +48,9 @@ export default function Parametres() {
     reg.showNotification("Test LE PASSEUR TAXI+", { body: "Les notifications fonctionnent. Glissez pour la supprimer.", icon: "/icons/icon-192.png", tag: "test" });
   };
   const sauverProfil = async () => {
-    localStorage.setItem("lptp-profil", JSON.stringify(profil));
-    if (supabase && user && navigator.onLine) await supabase.from("profils").upsert({ id: user.id, entreprise: profil.entreprise || "LE PASSEUR TAXI+", responsable: profil.responsable, telephone: profil.telephone, ville: profil.ville });
-    toast("Profil enregistré");
+    await majParametres({ ...profil, entreprise: profil.entreprise?.trim() || "LE PASSEUR TAXI+" });
+    setEdite(false);
+    toast(store.distant ? "Enregistré — visible sur tous vos appareils" : "Enregistré");
   };
   const importer = async (f: File) => {
     try {
@@ -69,10 +69,10 @@ export default function Parametres() {
     <Sec titre="Entreprise" />
     <div className="card">
       <div className="row2">
-        <Field label="Nom de l'entreprise"><input className="input" value={profil.entreprise || ""} placeholder="LE PASSEUR TAXI+" onChange={e => setProfil({ ...profil, entreprise: e.target.value })} /></Field>
-        <Field label="Responsable"><input className="input" value={profil.responsable || ""} onChange={e => setProfil({ ...profil, responsable: e.target.value })} /></Field>
-        <Field label="Téléphone"><input className="input" type="tel" value={profil.telephone || ""} onChange={e => setProfil({ ...profil, telephone: e.target.value })} /></Field>
-        <Field label="Ville"><input className="input" value={profil.ville || ""} placeholder="Brazzaville" onChange={e => setProfil({ ...profil, ville: e.target.value })} /></Field>
+        <Field label="Nom de l'entreprise"><input className="input" value={profil.entreprise || ""} placeholder="LE PASSEUR TAXI+" onChange={e => changer({ entreprise: e.target.value })} /></Field>
+        <Field label="Responsable"><input className="input" value={profil.responsable || ""} onChange={e => changer({ responsable: e.target.value })} /></Field>
+        <Field label="Téléphone"><input className="input" type="tel" value={profil.telephone || ""} onChange={e => changer({ telephone: e.target.value })} /></Field>
+        <Field label="Ville"><input className="input" value={profil.ville || ""} placeholder="Brazzaville" onChange={e => changer({ ville: e.target.value })} /></Field>
       </div>
       <button className="btn sm" onClick={sauverProfil}>Enregistrer</button>
     </div>
@@ -83,7 +83,10 @@ export default function Parametres() {
         <span>{!supportNotif() ? "Non pris en charge par ce navigateur." : supportPush() && espace === "distant"
           ? "Notification envoyée par le serveur si une journée n'est pas remplie, même application fermée."
           : "Rappel quand l'application est ouverte ou récemment utilisée. Le push serveur demande la configuration Supabase (voir guide)."}</span></div>
-        <Toggle checked={rappel} onChange={basculerRappel} label="Rappel quotidien" /></div>
+        <Toggle checked={P.rappel_actif} onChange={basculerRappel} label="Rappel quotidien" /></div>
+      {P.rappel_actif && !appareil && supportNotif() && <div className="switch"><div><b>Cet appareil</b>
+        <span>Le rappel est activé sur votre compte. Autorisez les notifications ici pour le recevoir aussi sur ce téléphone.</span></div>
+        <button className="btn sm" onClick={() => basculerRappel(true)}>Autoriser</button></div>}
       <div className="switch"><div><b>Tester</b><span>Affiche une notification d'essai, supprimable d'un geste.</span></div>
         <button className="btn sm ghost" onClick={testNotif}>Envoyer</button></div>
       <p className="sub" style={{ marginTop: 8 }}>Les alertes (échéances, journées manquantes, salaires) s'affichent dans la cloche ; chacune se supprime avec ✕.</p>
@@ -106,7 +109,7 @@ export default function Parametres() {
     </div>
 
     <Sec titre="Apparence" />
-    <div className="card"><Seg value={theme} onChange={changerTheme} options={[["auto", "Automatique"], ["light", "Clair"], ["dark", "Sombre"]]} /></div>
+    <div className="card"><Seg value={P.theme} onChange={changerTheme} options={[["auto", "Automatique"], ["light", "Clair"], ["dark", "Sombre"]]} /></div>
 
     <Sec titre="Données" />
     <div className="card">

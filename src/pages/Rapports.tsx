@@ -11,7 +11,7 @@ import { Filtres } from "../components/Filtres";
 import { FluxChart } from "../components/charts";
 
 type Onglet = "mensuel" | "prevu" | "simulateur" | "export";
-const profil = () => { try { return JSON.parse(localStorage.getItem("lptp-profil") || "{}"); } catch { return {}; } };
+import { lireParametres } from "../lib/parametres";
 
 export default function Rapports() {
   const d = useDonnees();
@@ -113,7 +113,7 @@ function RapportImprimable({ taxiId, a, b }: { taxiId: string | null; a: string;
   const p = periode(d, taxiId, a, b), bl = bilan(d, taxiId, today());
   const serie = serieMois(d, taxiId, a < debut(d, taxiId) ? debut(d, taxiId) : a, b);
   const cats = detailDepenses(d, taxiId, a, b).slice(0, 12);
-  const pr = profil();
+  const pr = lireParametres();
   const nom = taxiId ? d.taxis.find(t => t.id === taxiId)?.nom : `Flotte (${d.taxis.length} taxi${d.taxis.length > 1 ? "s" : ""})`;
   return <div id="print">
     <div className="head"><div><h1>Rapport d'exploitation</h1><div>{pr.entreprise || "LE PASSEUR TAXI+"} · {nom}</div>

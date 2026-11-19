@@ -59,10 +59,29 @@ class Store {
       derniere: (await this.db.get("meta", "derniere")) ?? null,
       rejets: (await this.db.getAll("rejets")) as Rejet[]
     };
-    this.reconstruire(); this.pret = true; this.emettre();
-    if (this.distant) this.synchroniser();
+    this.reconstruire();
+    if (this.distant) {
+      // Premier lancement sur cet appareil : on attend le rapatriement du compte avant d'afficher
+      // quoi que ce soit, pour que le nouvel appareil montre d'emblée les mêmes données que les autres.
+      if (!this.sync.derniere && navigator.onLine)
+        await Promise.race([this.synchroniser(), new Promise(r => setTimeout(r, 20000))]);
+      else this.synchroniser();
+      this.ecouterTempsReel();
+    }
+    this.pret = true; this.emettre();
+  }
+  private canal: any = null;
+  /** Temps réel : un changement fait sur un autre appareil déclenche aussitôt un rapatriement. */
+  private ecouterTempsReel() {
+    const sb: any = supabase;
+    if (!sb?.channel || !this.userId) return;
+    this.canal = sb.channel(`lptp-${this.userId}`)
+      .on("postgres_changes", { event: "*", schema: "public" }, () => this.planifier(400))
+      .subscribe();
   }
   fermer() {
+    const sb: any = supabase;
+    if (this.canal) { try { sb?.removeChannel(this.canal); } catch {} this.canal = null; }
     this.db?.close(); this.db = null; this.maps.clear(); this.data = vide(); this.pret = false;
   }
   /** Efface toutes les données locales d'un espace (déconnexion). */

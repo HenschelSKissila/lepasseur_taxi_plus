@@ -52,7 +52,7 @@ export function genererDemo(ref = today()): Donnees {
   }
 
   const d: Donnees = { taxis: [t1, t2], investissements: inv, chauffeurs: [prosper, serge, eric], journees, charges,
-    depenses: [], salaires: [], notifications: [] };
+    depenses: [], salaires: [], notifications: [], parametres: [] };
 
   // Échéances passées payées, sauf la dernière vidange de chaque taxi (pour montrer un retard)
   const ech = echeancier(d, null, 0, ref);

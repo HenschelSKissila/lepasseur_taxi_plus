@@ -6,7 +6,7 @@ const db = new PGlite();
 await db.exec(`
   create role anon nologin; create role authenticated nologin;
   create schema auth;
-  create table auth.users (id uuid primary key, raw_user_meta_data jsonb default '{}');
+  create table auth.users (id uuid primary key, raw_user_meta_data jsonb default '{}', email_confirmed_at timestamptz);
   create function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
   grant usage on schema auth to authenticated, anon;
@@ -59,6 +59,14 @@ console.log(u2.recette == 21000 && new Date(u2.updated_at) > new Date(u1) ? "ok 
 await as(A, `update journees set deleted_at = now() where id='${jid}'`);
 try { await as(A, `insert into journees (taxi_id, date, recette) values ('${tA2}','2026-11-19',9000)`); console.log("ok  une journée supprimée libère la date"); }
 catch { console.log("FAIL date bloquée après suppression logique"); }
+// inscription sans vérification
+r = await (async () => { await db.exec("reset role"); return db.query(`select email_confirmed_at is not null as ok from auth.users where id='${A}'`); })();
+console.log(r.rows[0].ok ? "ok  compte confirmé automatiquement à l'inscription (aucun e-mail de vérification)" : "FAIL confirmation");
+// réglages du compte
+await as(A, `insert into parametres (id, entreprise, theme) values ('${A}', 'LE PASSEUR TAXI+', 'dark')`);
+r = await as(B, `select count(*)::int n from parametres`); console.log(r.rows[0].n === 0 ? "ok  les réglages d'un compte sont invisibles pour un autre" : "FAIL réglages");
+try { await as(A, `insert into parametres (id) values ('${B}')`); console.log("FAIL réglages au nom d'un autre"); }
+catch { console.log("ok  une ligne de réglages ne peut appartenir qu'à son compte"); }
 // chauffeur d'un autre compte
 const chA = (await as(A, `insert into chauffeurs (nom) values ('X') returning id`)).rows[0].id;
 const tB = (await as(B, `insert into taxis (nom) values ('Taxi B') returning id`)).rows[0].id;

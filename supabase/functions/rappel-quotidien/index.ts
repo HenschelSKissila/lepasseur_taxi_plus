@@ -51,6 +51,10 @@ Deno.serve(async req => {
   const parCompte = new Map<string, { date: string; manque: string[] | null }>();
 
   for (const a of abos ?? []) {
+    // Rappel désactivé sur le compte (depuis n'importe quel appareil) : rien n'est envoyé.
+    const { data: reglage } = await sb.from("parametres").select("rappel_actif, heure_rappel").eq("owner_id", a.owner_id).maybeSingle();
+    if (reglage && !reglage.rappel_actif) continue;
+    if (reglage?.heure_rappel != null) a.heure_rappel = reglage.heure_rappel;
     const { date, heure } = local(a.fuseau || "Africa/Brazzaville");
     if (!force && (heure !== a.heure_rappel || a.dernier_envoi === date)) continue;
 

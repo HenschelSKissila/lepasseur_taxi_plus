@@ -16,7 +16,8 @@ export default function Connexion() {
   const [busy, setBusy] = useState(false);
 
   const traduire = (m: string) => /Invalid login/i.test(m) ? "Adresse e-mail ou mot de passe incorrect."
-    : /Email not confirmed/i.test(m) ? "Confirmez d'abord votre adresse via le lien reçu par e-mail."
+    : /Email not confirmed/i.test(m) ? "La confirmation d'e-mail est encore active sur le serveur : exécutez le script SQL à jour ou désactivez « Confirm email » dans Supabase (voir guide)."
+    : /rate limit/i.test(m) ? "Trop de tentatives d'inscription en peu de temps. Désactivez « Confirm email » dans Supabase (voir guide) puis réessayez."
     : /already registered/i.test(m) ? "Un compte existe déjà avec cette adresse."
     : /Password should be/i.test(m) ? "Le mot de passe doit contenir au moins 6 caractères."
     : /fetch|network/i.test(m) ? "Pas de connexion Internet. La première connexion nécessite Internet ; ensuite l'application fonctionne hors ligne." : m;
@@ -28,9 +29,14 @@ export default function Connexion() {
         const { error } = await supabase!.auth.signInWithPassword({ email, password: mdp });
         if (error) throw error;
       } else if (vue === "inscription") {
-        const { data, error } = await supabase!.auth.signUp({ email, password: mdp, options: { data: { nom }, emailRedirectTo: location.origin } });
+        // Inscription sans vérification d'e-mail : le compte est confirmé à sa création côté base,
+        // puis on ouvre la session immédiatement.
+        const { data, error } = await supabase!.auth.signUp({ email, password: mdp, options: { data: { nom } } });
         if (error) throw error;
-        if (!data.session) setOk("Compte créé. Ouvrez le lien de confirmation envoyé à " + email + ", puis connectez-vous.");
+        if (!data.session) {
+          const { error: e2 } = await supabase!.auth.signInWithPassword({ email, password: mdp });
+          if (e2) throw e2;
+        }
       } else {
         const { error } = await supabase!.auth.resetPasswordForEmail(email, { redirectTo: location.origin + "/parametres" });
         if (error) throw error;
@@ -44,7 +50,7 @@ export default function Connexion() {
     <form className="ob-card" onSubmit={soumettre}>
       <img className="ob-logo" src="/img/logo-full.png" alt="LE PASSEUR TAXI+" width={520} height={446} />
       <h1 className="h1" style={{ textAlign: "center" }}>{vue === "connexion" ? "Connexion" : vue === "inscription" ? "Créer un compte" : "Mot de passe oublié"}</h1>
-      <p className="lead" style={{ textAlign: "center" }}>Gérer · Suivre · Rentabiliser</p>
+      <p className="lead" style={{ textAlign: "center" }}>{vue === "inscription" ? "Un seul compte pour tous vos téléphones : mêmes taxis, mêmes données, mêmes réglages." : "Gérer · Suivre · Rentabiliser"}</p>
       {err && <div className="err">{err}</div>}
       {ok && <div className="ok">{ok}</div>}
       {vue === "inscription" && <Field label="Votre nom"><input className="input" value={nom} onChange={e => setNom(e.target.value)} autoComplete="name" /></Field>}

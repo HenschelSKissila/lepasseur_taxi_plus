@@ -16,6 +16,18 @@ export interface Ligne {
   deleted_at?: string | null;
 }
 
+/** Réglages du compte, partagés par tous les appareils (une seule ligne, id = identifiant du compte). */
+export interface Parametres extends Ligne {
+  entreprise: string;
+  responsable: string | null;
+  telephone: string | null;
+  ville: string | null;
+  theme: "auto" | "light" | "dark";
+  rappel_actif: boolean;
+  heure_rappel: number;
+  alertes_masquees: string[];
+}
+
 export interface Taxi extends Ligne {
   nom: string;
   immatriculation: string | null;
@@ -112,6 +124,7 @@ export interface Notif extends Ligne {
 }
 
 export interface Tables {
+  parametres: Parametres;
   taxis: Taxi;
   investissements: Investissement;
   chauffeurs: Chauffeur;
@@ -122,7 +135,7 @@ export interface Tables {
   notifications: Notif;
 }
 export type NomTable = keyof Tables;
-export const TABLES: NomTable[] = ["chauffeurs", "taxis", "investissements", "charges", "journees", "depenses", "salaires", "notifications"];
+export const TABLES: NomTable[] = ["parametres", "chauffeurs", "taxis", "investissements", "charges", "journees", "depenses", "salaires", "notifications"];
 
 /** Jeu de données complet chargé en mémoire (lignes non supprimées). */
 export type Donnees = { [K in NomTable]: Tables[K][] };

@@ -5,6 +5,7 @@ import { supabase } from "./supabase";
 import { store } from "./store";
 import { genererDemo } from "./demo";
 import { TABLES } from "./types";
+import { assurerParametres, appliquerTheme, lireParametres } from "./parametres";
 
 export type Espace = "distant" | "local" | "demo";
 interface Session {
@@ -33,6 +34,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (e === "demo") { await store.ouvrir("demo", null, false); await remplirDemo(); }
     else if (e === "local") await store.ouvrir("local", null, false);
     else if (u) await store.ouvrir(u.id, u.id, true);
+    await assurerParametres();
+    appliquerTheme(lireParametres().theme);
     setPret(true);
   }
 

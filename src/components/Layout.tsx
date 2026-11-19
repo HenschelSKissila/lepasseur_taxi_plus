@@ -6,6 +6,8 @@ import { store, useDonnees, useSync } from "../lib/store";
 import { useSession } from "../lib/session";
 import { alertesVisibles, masquer, verifierRappel, planifierRappelLocal } from "../lib/notifications";
 import { heureRel } from "../lib/format";
+import { useParametres, appliquerTheme } from "../lib/parametres";
+import { rappelAppareil, activerRappel, supportNotif } from "../lib/notifications";
 
 const TITRES: Record<string, string> = {
   "/": "Tableau de bord", "/saisie": "Saisie du jour", "/taxis": "Mes taxis", "/depenses": "Dépenses",
@@ -73,7 +75,11 @@ export function Layout() {
 
   useEffect(() => { const f = () => setScrolled(scrollY > 4); addEventListener("scroll", f, { passive: true }); return () => removeEventListener("scroll", f); }, []);
   useEffect(() => { scrollTo(0, 0); }, [loc.pathname]);
-  useEffect(() => { planifierRappelLocal(); verifierRappel(); }, []);
+  const P = useParametres();
+  useEffect(() => { appliquerTheme(P.theme); }, [P.theme]);
+  useEffect(() => { planifierRappelLocal(); verifierRappel(); }, [P.rappel_actif]);
+  const [proposerRappel, setProposerRappel] = useState(false);
+  useEffect(() => { setProposerRappel(P.rappel_actif && supportNotif() && !rappelAppareil()); }, [P.rappel_actif]);
   useEffect(() => {
     const on = () => toast("Connexion rétablie — envoi des données en attente");
     const off = () => toast("Hors ligne : vos saisies sont conservées sur l'appareil");
@@ -113,6 +119,9 @@ export function Layout() {
         </button>
       </header>
       <main>
+        {proposerRappel && <div className="offline-band"><Icon n="bell" />Le rappel de 20 h est activé sur votre compte.
+          <button className="link" style={{ marginLeft: "auto" }} onClick={async () => { const r = await activerRappel(); toast(r.message); setProposerRappel(!r.ok); }}>Activer ici</button>
+          <button className="link" style={{ color: "var(--muted)" }} onClick={() => setProposerRappel(false)}>Plus tard</button></div>}
         {espace === "demo" && <div className="demo-band"><Icon n="info" />Démonstration : données fictives sur cet appareil uniquement.
           <button onClick={deconnecter}>Quitter</button></div>}
         <Outlet />

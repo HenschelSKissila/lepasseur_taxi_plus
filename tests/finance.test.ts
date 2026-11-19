@@ -109,7 +109,7 @@ describe("synchronisation", () => {
 
 describe("jeu vide", () => {
   it("aucune division par zéro sans données", () => {
-    const vide: Donnees = { taxis: [], investissements: [], chauffeurs: [], journees: [], charges: [], depenses: [], salaires: [], notifications: [] };
+    const vide: Donnees = { taxis: [], investissements: [], chauffeurs: [], journees: [], charges: [], depenses: [], salaires: [], notifications: [], parametres: [] };
     const b = F.bilan(vide, null, REF);
     expect(b.part).toBe(0); expect(b.marge).toBe(0);
     expect(F.alertes(vide, REF)).toEqual([]);

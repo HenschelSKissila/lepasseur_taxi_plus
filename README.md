@@ -87,14 +87,15 @@ Il vous faut trois comptes gratuits : **GitHub**, **Supabase**, **Netlify**.
    `https://le-passeur-taxi-plus.netlify.app` (renommable dans *Site configuration*).
    Si vous avez ajouté les variables après le premier déploiement : **Deploys → Trigger deploy**.
 
-### Étape 4 — Relier Supabase à l'adresse du site
+### Étape 4 — Comptes sans vérification d'e-mail
 
-Supabase → **Authentication → URL Configuration** :
-- **Site URL** : l'adresse Netlify
-- **Redirect URLs** : la même adresse suivie de `/**`
+L'inscription et la connexion se font par **e-mail + mot de passe, sans e-mail de vérification**.
+Le script SQL confirme automatiquement chaque compte à sa création. Faites en plus ce réglage,
+qui évite la limite d'envoi d'e-mails de l'offre gratuite (quelques inscriptions par heure) :
 
-(Facultatif) *Authentication → Providers → Email* : désactivez **Confirm email** si vous
-ne voulez pas valider l'adresse par lien à l'inscription.
+Supabase → **Authentication → Sign In / Providers → Email** → désactivez **Confirm email** → *Save*.
+
+Puis **Authentication → URL Configuration** → **Site URL** : l'adresse Netlify.
 
 ### Étape 5 — Installer sur le téléphone
 
@@ -102,8 +103,25 @@ ne voulez pas valider l'adresse par lien à l'inscription.
   (ou le bouton *Installer* dans *Paramètres*).
 - **iPhone** : **Safari** → Partager → **Sur l'écran d'accueil**.
 
-Créez votre compte, ajoutez votre taxi : c'est prêt. Pour un second téléphone (gérant,
-associé), connectez-vous avec le même compte : les données se synchronisent.
+Créez votre compte, ajoutez votre taxi : c'est prêt.
+
+### Un compte, plusieurs appareils
+
+Connectez-vous avec le **même e-mail et le même mot de passe** sur un autre téléphone, une
+tablette ou un ordinateur : au premier lancement, l'application rapatrie tout le compte
+**avant** d'afficher quoi que ce soit, puis reste synchronisée en continu.
+
+| Ce qui est partagé entre appareils | |
+|---|---|
+| Taxis, investissements, journées, dépenses, charges, échéances payées | ✓ |
+| Chauffeurs, salaires, avances, primes, retenues | ✓ |
+| Nom de l'entreprise, responsable, téléphone, ville | ✓ |
+| Thème clair / sombre | ✓ |
+| Rappel de 20 h activé ou non | ✓ (chaque appareil doit autoriser les notifications une fois — un bandeau le propose) |
+| Notifications lues ou supprimées, alertes masquées | ✓ |
+
+Une modification faite sur un appareil apparaît sur les autres **en quelques secondes**
+(temps réel Supabase), même sans recharger la page.
 
 ---
 

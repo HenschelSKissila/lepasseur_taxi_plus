@@ -132,6 +132,30 @@ describe("synchronisation hors ligne", () => {
     expect(tbl("journees").has(idJournee("t-1", "2026-11-14"))).toBe(true);
   });
 
+  it("nouvel appareil, même compte : réglages et données présents dès l'ouverture", async () => {
+    // Téléphone 1 : réglages + taxi + journée
+    await store.ouvrir("tel-1", USER, true); await attendre();
+    await store.enregistrer("parametres", { id: USER, entreprise: "Transports Kissila", responsable: "hks", telephone: null, ville: "Brazzaville",
+      theme: "dark", rappel_actif: true, heure_rappel: 20, alertes_masquees: ["retard-x"] } as any);
+    await store.enregistrer("taxis", taxi);
+    await store.enregistrer("journees", journee("2026-11-17", 21000));
+    await store.synchroniser();
+    store.fermer();
+    // Téléphone 2 : base locale vide, première ouverture → le compte est rapatrié avant l'affichage
+    await store.ouvrir("tel-2", USER, true);
+    expect(store.data.parametres[0]?.entreprise).toBe("Transports Kissila");
+    expect(store.data.parametres[0]?.theme).toBe("dark");
+    expect(store.data.parametres[0]?.alertes_masquees).toEqual(["retard-x"]);
+    expect(store.data.taxis.map(t => t.nom)).toEqual(["Taxi 01"]);
+    expect(store.data.journees.map(j => j.recette)).toEqual([21000]);
+    // Modification sur le téléphone 2, visible sur le téléphone 1
+    await store.enregistrer("parametres", { ...store.data.parametres[0], theme: "light" });
+    await store.synchroniser();
+    store.fermer();
+    await store.ouvrir("tel-1", USER, true); await store.synchroniser();
+    expect(store.data.parametres[0]?.theme).toBe("light");
+  });
+
   it("une suppression locale se propage au serveur (suppression logique)", async () => {
     await store.ouvrir("appareil-G", USER, true); await attendre();
     await store.enregistrer("taxis", taxi);
