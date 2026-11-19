@@ -1,0 +1,6 @@
+# Configuration minimale pour la CLI Supabase (facultative : tout peut se faire depuis le tableau de bord).
+project_id = "le-passeur-taxi-plus"
+
+[functions.rappel-quotidien]
+# Appelée par pg_cron avec un secret partagé, pas par un utilisateur connecté.
+verify_jwt = false
