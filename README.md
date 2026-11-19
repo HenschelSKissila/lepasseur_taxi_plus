@@ -37,8 +37,10 @@ Netlify à partir de GitHub. Tout fonctionne sur les offres gratuites.
 Trois modes d'exploitation par taxi : **versement journalier**, **exploitation directe**
 (chauffeur salarié) et **je conduis moi-même** (avec suivi des prélèvements personnels).
 
-Un **mode démonstration** (bouton sur l'écran de connexion) charge deux taxis et six mois
-d'activité fictive, sur l'appareil uniquement.
+**Accès par compte obligatoire** : à l'ouverture, l'application affiche l'écran de connexion
+(onglets *Se connecter* / *Créer un compte*, e-mail + mot de passe, sans vérification). Une fois
+connecté, on le reste sur l'appareil — même hors ligne — jusqu'à la déconnexion volontaire.
+Un mode démonstration existe uniquement dans la version de développement sans serveur.
 
 ---
 
@@ -257,6 +259,8 @@ npm test                       # moteur financier + synchronisation hors ligne (
 npm run test:sql               # schéma, contraintes et sécurité RLS (PostgreSQL embarqué)
 npm run build:local && npx vite preview --port 4173   # version sans serveur pour les tests
 python3 tests/e2e.py           # parcours complet dans Chromium (Playwright)
+npm run build && npx vite preview --port 4174
+python3 tests/e2e_auth.py      # accès par compte (connexion obligatoire, inscription, session conservée)
 ```
 
 ```

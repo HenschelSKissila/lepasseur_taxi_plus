@@ -584,3 +584,4 @@ main{overflow-x:clip}
 @media (max-width:520px){.donut-wrap{justify-content:center}}
 .mono,.num,.kpi .v,.flux .f b,.li .am,.tbl td,.chip,.money-wrap .input{word-spacing:-.18em}
 .ob-logo{width:150px!important}
+.ob-logo{width:132px!important;height:auto!important;margin:0 auto 18px!important}

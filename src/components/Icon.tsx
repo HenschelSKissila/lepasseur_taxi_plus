@@ -41,6 +41,8 @@ P.coins = '<circle cx="8" cy="8" r="6"/><path d="M18.1 10.4A6 6 0 1 1 10.3 18M7 
 P.arrowUp = '<path d="M12 19V5M5 12l7-7 7 7"/>';
 P.arrowDown = '<path d="M12 5v14M19 12l-7 7-7-7"/>';
 P.list = '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>';
+P.eye = '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>';
+P.eyeOff = '<path d="M9.9 4.2A10 10 0 0 1 12 4c6.4 0 10 7 10 7a17.6 17.6 0 0 1-2.2 3.2M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2M2 2l20 20"/>';
 P.archive = '<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4"/>';
 
 export function Icon({ n, className = "i", size }: { n: string; className?: string; size?: number }) {

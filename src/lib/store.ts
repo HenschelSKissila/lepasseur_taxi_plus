@@ -83,6 +83,7 @@ class Store {
     const sb: any = supabase;
     if (this.canal) { try { sb?.removeChannel(this.canal); } catch {} this.canal = null; }
     this.db?.close(); this.db = null; this.maps.clear(); this.data = vide(); this.pret = false;
+    this.userId = null; this.distant = false;   // indispensable pour qu'une reconnexion rouvre bien le compte
   }
   /** Efface toutes les données locales d'un espace (déconnexion). */
   async effacer(espace: string) {

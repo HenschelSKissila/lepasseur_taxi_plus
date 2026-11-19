@@ -41,7 +41,7 @@ export default function Dashboard() {
     <p className="lead">Ajoutez votre premier taxi : l'application calcule ensuite votre marge, l'amortissement et la date à laquelle votre investissement sera remboursé.</p>
     <div className="btns" style={{ maxWidth: 420, margin: "0 auto" }}>
       <button className="btn" onClick={() => nav("/taxis/nouveau")}><Icon n="plus" /> Ajouter un taxi</button>
-      {espace !== "demo" && <button className="btn ghost" onClick={entrerDemo}>Voir une démonstration</button>}
+      {espace === "local" && <button className="btn ghost" onClick={entrerDemo}>Voir une démonstration</button>}
     </div>
   </div>;
 

@@ -25,7 +25,9 @@ async function remplirDemo() {
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [espace, setEspace] = useState<Espace>(demoActive() ? "demo" : supabase ? "distant" : "local");
+  // Avec un serveur configuré, le compte est obligatoire : la démonstration n'existe qu'en mode local.
+  if (supabase && demoActive()) { try { localStorage.removeItem(CLE_DEMO); } catch {} }
+  const [espace, setEspace] = useState<Espace>(supabase ? "distant" : demoActive() ? "demo" : "local");
   const [user, setUser] = useState<User | null>(null);
   const [pret, setPret] = useState(false);
 
@@ -57,7 +59,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const api: Session = {
     espace, user, pret, connecte: espace !== "distant" || !!user,
-    async entrerDemo() { localStorage.setItem(CLE_DEMO, "1"); setEspace("demo"); },
+    async entrerDemo() { if (supabase) return; localStorage.setItem(CLE_DEMO, "1"); setEspace("demo"); },
     async quitterDemo() { localStorage.removeItem(CLE_DEMO); await store.effacer("demo"); location.replace("/"); },
     async deconnecter() {
       if (espace === "demo") return api.quitterDemo();
