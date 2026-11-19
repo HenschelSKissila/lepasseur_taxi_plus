@@ -51,11 +51,11 @@ Il vous faut trois comptes gratuits : **GitHub**, **Supabase**, **Netlify**.
 ### Étape 1 — Créer la base de données (Supabase)
 
 > Votre projet est déjà branché : l'adresse `https://zsnmuyltwdbrbrjlavvz.supabase.co` et la clé
-> publique sont dans `.env.production`, lu automatiquement à chaque build Netlify. Il reste
+> publique sont dans le fichier `.env` (et en valeur par défaut dans `src/lib/supabase.ts`), utilisés dans tous les modes : `npm run dev`, build local et Netlify. Il reste
 > seulement à créer les tables (point 2) dans **ce** projet.
 
 1. (Projet déjà créé.) Pour un autre projet : [supabase.com](https://supabase.com) → **New project**,
-   région proche (*Paris* ou *Frankfurt*), puis remplacez les deux valeurs de `.env.production`.
+   région proche (*Paris* ou *Frankfurt*), puis remplacez les deux valeurs de `.env`.
 2. Menu **SQL Editor** → **New query** → collez **tout** le contenu du fichier
    `supabase/migrations/20261119000000_schema_initial.sql` → **Run**.
    Le message *Success. No rows returned* confirme la création des tables.
@@ -83,7 +83,7 @@ Il vous faut trois comptes gratuits : **GitHub**, **Supabase**, **Netlify**.
 
 1. Sur [netlify.com](https://app.netlify.com) → **Add new site → Import an existing project → GitHub**
    → choisissez le dépôt. Les réglages de build sont lus dans `netlify.toml` : ne changez rien.
-2. Aucune variable à saisir : les clés sont dans `.env.production`. (Une variable définie dans
+2. Aucune variable à saisir : les clés sont dans `.env`. (Une variable définie dans
    Netlify, si vous en ajoutez une, est prioritaire.)
 3. **Deploy**. Après 1 à 2 minutes, le site est en ligne à une adresse du type
    `https://le-passeur-taxi-plus.netlify.app` (renommable dans *Site configuration*).
@@ -211,6 +211,32 @@ PWABuilder produit aussi des paquets **Microsoft Store** et **iOS** à partir de
 Pour régénérer les captures après une évolution de l'interface :
 `npm run build:local && npx vite preview --port 4173` puis `python3 tools/captures.py`.
 
+## 3 ter. Vérifier que Supabase fonctionne et que les données arrivent
+
+**Dans l'application** : *Paramètres → Synchronisation → Tester la liaison avec le serveur*.
+Le test vérifie en direct, ligne par ligne :
+
+| Étape | Si elle est rouge |
+|---|---|
+| Serveur Supabase joignable | Projet en pause (bouton *Restore* dans Supabase) ou adresse erronée |
+| Compte reconnu par le serveur | Déconnectez-vous puis reconnectez-vous |
+| Base de données installée | Exécutez `1-A-COLLER-DANS-SUPABASE.sql` dans *SQL Editor* |
+| Écriture et relecture sur le serveur | Une donnée est envoyée puis relue : l'écart indique la cause |
+| File d'envoi | Des saisies attendent encore (hors ligne) ou ont été refusées |
+| Données identiques sur l'appareil et le serveur | Affiche le nombre de taxis, journées, dépenses… de chaque côté |
+
+**Dans Supabase** :
+- *Authentication → Users* : votre compte apparaît dès l'inscription.
+- *Table Editor* → `taxis`, `journees`, `depenses`… : chaque saisie apparaît quelques secondes
+  après l'enregistrement (bouton *Refresh*).
+- Test entre appareils : saisissez une journée sur le téléphone, ouvrez l'application sur un
+  ordinateur avec le même compte : elle y est.
+
+**L'application s'ouvre sans demander de connexion ?** C'est qu'une ancienne version est encore
+en cache dans le navigateur (par exemple la première version HTML testée à la même adresse).
+Ouvrez les outils du navigateur → *Application* → *Storage* → **Clear site data**, ou
+désinstallez l'ancienne application de l'écran d'accueil, puis rouvrez l'adresse.
+
 ## 4. Mises à jour
 
 Modifiez le code sur GitHub (ou poussez un commit) : Netlify reconstruit le site, et
@@ -306,7 +332,6 @@ Supabase (PostgreSQL, Auth, RLS, Edge Functions) · IndexedDB (`idb`).
 
 ```bash
 npm install
-cp .env.example .env.local     # renseigner l'URL et la clé Supabase (ou laisser vide : mode local)
 npm run dev                    # http://localhost:5173
 npm test                       # moteur financier + synchronisation hors ligne (Vitest)
 npm run test:sql               # schéma, contraintes et sécurité RLS (PostgreSQL embarqué)

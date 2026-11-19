@@ -11,6 +11,7 @@ OUT = os.path.join(os.path.dirname(__file__), "screens"); os.makedirs(OUT, exist
 CHROME = "/opt/pw-browsers/chromium-1243/chrome-linux64/chrome"
 UID = "7b0c2f8e-5a3d-4f1e-9c2b-1d6e8a4f0b33"
 comptes = {}          # email -> mot de passe (faux serveur d'authentification)
+base = {}; horloge = [0]
 echecs = []
 
 def ok(c, m):
@@ -40,8 +41,23 @@ def serveur(route):
             return route.fulfill(status=400, json={"error": "invalid_grant", "error_description": "Invalid login credentials", "msg": "Invalid login credentials"})
         return route.fulfill(json=session(corps["email"]))
     if "/auth/v1/logout" in u: return route.fulfill(status=204, body="")
-    if "/auth/v1/user" in u: return route.fulfill(json=session("x@y.z")["user"])
-    if "/rest/v1/" in u: return route.fulfill(status=200 if req.method == "GET" else 201, json=[])
+    if "/auth/v1/health" in u: return route.fulfill(json={"name": "GoTrue"})
+    if "/auth/v1/user" in u: return route.fulfill(json=session("hks@lepasseur.cg")["user"])
+    if "/rest/v1/rpc/" in u: return route.fulfill(status=204, body="")
+    if "/rest/v1/" in u:   # mini-serveur PostgREST en mémoire
+        t = u.split("/rest/v1/")[1].split("?")[0]; tab = base.setdefault(t, {})
+        if req.method == "POST":
+            lignes = corps if isinstance(corps, list) else [corps]
+            for l in lignes:
+                horloge[0] += 1
+                tab[l["id"]] = {**tab.get(l["id"], {}), **l, "updated_at": f"2099-01-01T00:00:{horloge[0] % 60:02d}.{horloge[0]:06d}+00:00"}
+            return route.fulfill(status=201, json=[])
+        vivantes = [r for r in tab.values() if not r.get("deleted_at")]
+        if req.method == "HEAD": return route.fulfill(status=200, headers={"content-range": f"0-0/{len(vivantes)}", "access-control-allow-origin": "*", "access-control-expose-headers": "Content-Range"}, body="")
+        if "vnd.pgrst.object" in (req.headers.get("accept") or ""):
+            return route.fulfill(json=vivantes[0] if vivantes else None) if vivantes else route.fulfill(status=406, json={"code": "PGRST116", "message": "0 rows"})
+        if "updated_at=gt." in u: return route.fulfill(json=[])      # pas de changements venant d'ailleurs
+        return route.fulfill(json=vivantes)
     return route.fulfill(status=404, body="")
 
 with sync_playwright() as p:
@@ -77,6 +93,18 @@ with sync_playwright() as p:
     ctx.set_offline(True); page.reload(); page.wait_for_selector("#synchro", timeout=20000)
     ok(page.locator("text=Bon retour").count() == 0, "toujours connecté hors ligne")
     ctx.set_offline(False)
+
+    print("— Test de liaison avec le serveur")
+    page.goto(URL + "/taxis/nouveau"); page.wait_for_selector(".step-dots")
+    for _ in range(3): page.click("text=Continuer")
+    page.click("text=Créer le taxi"); page.wait_for_selector(".hero")
+    page.goto(URL + "/parametres"); page.wait_for_selector("#btn-diag")
+    page.click("#btn-diag"); page.wait_for_selector("#diag p.ok, #diag p.err", timeout=30000)
+    lignes = page.locator("#diag .kv").all_inner_texts()
+    for l in lignes: print("       " + l.replace("\n", " — ")[:120])
+    ok(page.locator("#diag p.ok").count() == 1, "diagnostic : serveur, compte, base, aller-retour et données identiques")
+    ok(len(base.get("taxis", {})) == 1 and len(base.get("investissements", {})) == 10, "le taxi et ses 10 postes d'investissement sont arrivés sur le serveur")
+    page.locator("#diag").scroll_into_view_if_needed(); page.screenshot(path=f"{OUT}/33-diagnostic.png")
 
     print("— Déconnexion / reconnexion")
     page.goto(URL + "/parametres"); page.wait_for_selector("text=Se déconnecter")

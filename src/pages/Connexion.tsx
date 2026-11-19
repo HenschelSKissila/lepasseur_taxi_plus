@@ -3,7 +3,7 @@
  * La session est mémorisée sur l'appareil : on reste connecté, y compris hors ligne,
  * jusqu'à une déconnexion volontaire. */
 import { useState } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, projetSupabase } from "../lib/supabase";
 import { Field } from "../components/ui";
 import { Icon } from "../components/Icon";
 
@@ -101,6 +101,7 @@ export default function Connexion() {
       </div>
       <p className="sub" style={{ textAlign: "center", marginTop: 16 }}>Vous restez connecté sur cet appareil, même sans Internet, jusqu'à la déconnexion.</p>
       <p className="sub" style={{ textAlign: "center", marginTop: 6 }}><a href="/confidentialite" target="_blank" rel="noopener">Politique de confidentialité</a></p>
+      <p className="sub" style={{ textAlign: "center", marginTop: 6, fontSize: 11 }}>Serveur : <span className="mono">{projetSupabase}</span></p>
     </form>
   </div>;
 }

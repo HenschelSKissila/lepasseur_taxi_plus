@@ -10,6 +10,8 @@ import { TABLES } from "../lib/types";
 import { Field, Seg, Sec, Toggle, useUI } from "../components/ui";
 import { Icon } from "../components/Icon";
 import { verifierMaj, versionApp } from "../lib/pwa";
+import { diagnostiquer, type Etape } from "../lib/diagnostic";
+import { projetSupabase } from "../lib/supabase";
 
 const NOMS: Record<string, string> = { taxis: "taxi", journees: "journée", depenses: "dépense", charges: "charge", salaires: "salaire",
   chauffeurs: "chauffeur", investissements: "investissement", notifications: "notification" };
@@ -28,6 +30,8 @@ export default function Parametres() {
     [P.entreprise, P.responsable, P.telephone, P.ville]);
   const changer = (p: Partial<typeof profil>) => { setEdite(true); setProfil(x => ({ ...x, ...p })); };
   const fichier = useRef<HTMLInputElement>(null);
+  const [diag, setDiag] = useState<Etape[] | null>(null);
+  const [enDiag, setEnDiag] = useState(false);
   const [install, setInstall] = useState<any>((window as any).__installPrompt || null);
 
   useEffect(() => {
@@ -106,6 +110,19 @@ export default function Parametres() {
               <button className="btn sm danger" onClick={() => store.traiterRejet(r.k, false)}>Ignorer</button></span></div>)}</>}
       </>}
       <p className="sub" style={{ marginTop: 10 }}>Chaque saisie est d'abord enregistrée sur l'appareil, puis envoyée dès qu'Internet est disponible. Rien n'est perdu hors connexion.</p>
+      {store.distant && <>
+        <h3 style={{ marginTop: 16 }}>Tester la liaison avec le serveur</h3>
+        <p className="sub" style={{ marginBottom: 10 }}>Vérifie en direct que le serveur répond, que la base est installée, qu'une donnée part et revient, et que l'appareil et le serveur contiennent les mêmes données.</p>
+        <button className="btn sm" id="btn-diag" disabled={enDiag} onClick={async () => { setEnDiag(true); setDiag([]); try { await diagnostiquer(setDiag); } finally { setEnDiag(false); } }}>
+          <Icon n="check" /> {enDiag ? "Test en cours…" : "Lancer le test"}</button>
+        {diag && <div style={{ marginTop: 12 }} id="diag">{diag.map((x, i) => <div key={i} className="kv" style={{ alignItems: "flex-start" }}>
+          <span style={{ display: "flex", gap: 9 }}><b style={{ color: x.ok ? "var(--brand)" : "var(--red)", fontFamily: "var(--sans)" }}>{x.ok ? "✓" : "✗"}</b>
+            <span><b style={{ fontFamily: "var(--sans)", fontWeight: 650 }}>{x.titre}</b><br /><small className="mut">{x.detail}</small></span></span></div>)}
+          {!enDiag && diag.length > 0 && <p className={diag.every(x => x.ok) ? "ok" : "err"} style={{ marginTop: 10 }}>
+            {diag.every(x => x.ok) ? "Tout fonctionne : vos données sont bien enregistrées sur Supabase." : "Un problème a été détecté : suivez l'indication de la ligne en rouge."}</p>}
+        </div>}
+        <p className="sub" style={{ marginTop: 10 }}>Projet : <span className="mono">{projetSupabase}</span></p>
+      </>}
     </div>
 
     <Sec titre="Apparence" />
